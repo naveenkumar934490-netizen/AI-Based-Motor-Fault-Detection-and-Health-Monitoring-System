@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Motor Health Monitor Pro</title>
+<style>
+:root{--bg:#eef1ee;--surf:#fff;--ink:#16201c;--mut:#5d6b64;--line:#d5dcd7;--ok:#1f8a4c;--warn:#c27a00;--bad:#c0392b;--acc:#0b6e8a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1714;--surf:#17221d;--ink:#e6efe9;--mut:#93a59b;--line:#2a3a33;--ok:#4cc97f;--warn:#f0b13a;--bad:#ff6b5b;--acc:#4cc3e0}}
+:root[data-theme="dark"]{--bg:#0f1714;--surf:#17221d;--ink:#e6efe9;--mut:#93a59b;--line:#2a3a33;--ok:#4cc97f;--warn:#f0b13a;--bad:#ff6b5b;--acc:#4cc3e0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bahnschrift","Segoe UI",system-ui,sans-serif;line-height:1.4}
+.wrap{max-width:1100px;margin:0 auto;padding:14px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;align-items:baseline;margin-bottom:12px}
+h1{font-size:1.3rem;margin:0}h2{font-size:.98rem;margin:0 0 8px}
+.sub{color:var(--mut);font-size:.85rem}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:12px}
+.g{display:grid;gap:12px;margin-top:12px}.top{grid-template-columns:1fr 1.3fr 1.3fr;margin-top:0}
+.m4{grid-template-columns:repeat(4,1fr)}.two{grid-template-columns:1fr 1fr}
+.ring{width:150px;height:150px;display:block;margin:0 auto}
+.c{text-align:center}.score{font-size:2.3rem;font-weight:700}
+.badge{display:inline-block;padding:2px 12px;border-radius:99px;color:#fff;font-weight:600;font-size:.88rem}
+.v{font-size:1.5rem;font-weight:700}.u{font-size:.8rem;color:var(--mut)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;width:0;transition:width .5s,background .5s}
+canvas{width:100%;height:56px;display:block;margin-top:4px}canvas.big{height:120px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+button{font:inherit;font-size:.88rem;padding:6px 10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);border-radius:6px;cursor:pointer}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:.85rem}.row span{width:118px}.row .bar{flex:1}.row b{width:40px;text-align:right}
+input[type=range]{width:100%}.sl{font-size:.82rem;margin:4px 0}.sl b{float:right}
+#log{max-height:180px;overflow:auto;font-size:.82rem;margin:0;padding:0;list-style:none}#log li{padding:3px 0;border-bottom:1px solid var(--line)}
+ul.rec{margin:0;padding-left:18px;font-size:.88rem}
+@media(max-width:820px){.top,.two{grid-template-columns:1fr}.m4{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="wrap">
+<header><h1>AI Motor Health Monitor Pro</h1><span class="sub" id="clock"></span></header>
+
+<div class="g top">
+ <div class="card c"><h2>Motor health</h2>
+  <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/><circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="var(--ok)" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .6s,stroke .6s"/></svg>
+  <div class="score" id="score">100%</div><span class="badge" id="status">Healthy</span>
+  <div class="sub" style="margin-top:8px" id="rul">Stable trend</div>
+ </div>
+ <div class="card"><h2>Input source</h2>
+  <div class="btns"><button id="bs" class="on">Simulation</button><button id="bm">Manual input</button></div>
+  <div id="simBox"><div class="btns" id="modes"></div>
+   <div class="sl">Fault severity <b id="sevT">100%</b></div><input type="range" id="sev" min="0" max="120" value="100" aria-label="Fault severity"></div>
+  <div id="manBox" hidden></div>
+ </div>
+ <div class="card"><h2>AI diagnosis</h2>
+  <div style="font-size:1.25rem;font-weight:700" id="diag">Normal operation</div>
+  <div class="sub">Confidence <b id="conf">0%</b> · Model accuracy <b id="acc">-</b></div>
+  <div class="sl" style="margin-top:8px">Anomaly index <b id="anT">0</b></div><div class="bar"><i id="an"></i></div>
+  <h2 style="margin-top:10px">Recommended action</h2><ul class="rec" id="rec"></ul>
+ </div>
+</div>
+
+<div class="g m4" id="metrics"></div>
+
+<div class="g two">
+ <div class="card"><h2>Three-phase current</h2><div id="ph"></div><div class="sub" id="phT"></div></div>
+ <div class="card"><h2>Vibration spectrum (FFT)</h2><canvas class="big" id="spec"></canvas><div class="sub">Bearing faults add peaks at high frequency bins.</div></div>
+</div>
+<div class="g two">
+ <div class="card"><h2>Fault probability (softmax neural classifier)</h2><div id="probs"></div></div>
+ <div class="card"><h2>Alert log</h2><ul id="log"></ul></div>
+</div>
+<p class="sub">Readings are simulated so the app runs without hardware. The classifier is trained in your browser on synthetic fault data when the page loads. On the real project the ESP32 (ZMPT101B, ACS712 x3, DS18B20, Hall sensor, MPU6050) supplies the same seven inputs.</p>
+</div>
+<script>
+var $=function(i){return document.getElementById(i)},col=function(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()};
+var cl=function(x,a,b){return Math.max(a,Math.min(b,x))};
+function gs(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
+var K=["V","I","T","R","vib","imb","pf"],SIG=[3,.12,1.5,12,.2,1.2,.02];
+var C=[
+{n:"Normal",f:[230,2.5,45,1450,1.2,2,.86],d:"Normal operation",r:["Keep routine inspection schedule.","Log readings weekly for trend baseline."]},
+{n:"Overload",f:[228,4.8,72,1370,2.0,3,.8],d:"Overload fault",r:["Reduce mechanical load immediately.","Check belt/coupling alignment and jammed gear.","Verify overload relay setting."]},
+{n:"Overheating",f:[230,3.2,96,1425,1.6,3,.84],d:"Overheating fault",r:["Stop the motor and let it cool.","Clean fan cover and ventilation ducts.","Test winding insulation (megger)."]},
+{n:"Bearing wear",f:[230,3,64,1395,6.5,3,.83],d:"Bearing fault",r:["Schedule bearing replacement soon.","Lubricate and check shaft alignment.","Increase vibration monitoring frequency."]},
+{n:"Under-voltage",f:[182,3.7,66,1300,1.8,4,.78],d:"Under-voltage fault",r:["Check supply line and loose terminals.","Use a voltage stabiliser or check transformer tap.","Avoid starting under heavy load."]},
+{n:"Over-voltage",f:[262,2.2,52,1492,1.5,2,.9],d:"Over-voltage fault",r:["Check supply regulation and surge protector.","Inspect insulation for stress."]},
+{n:"Phase imbalance",f:[228,3.4,62,1410,3.2,22,.78],d:"Phase imbalance fault",r:["Check all three phase connections and fuses.","Measure line voltages for single-phasing.","Tighten loose terminals."]}];
+var N=C[0].f,NF=7,NC=C.length;
+/* ---- train softmax classifier in browser ---- */
+function samp(c){var s=c?.45+Math.random()*.7:0,v=[];for(var i=0;i<NF;i++)v.push(N[i]+(C[c].f[i]-N[i])*s+gs()*SIG[i]*1.3);return v}
+var X=[],Y=[];for(var c=0;c<NC;c++)for(var j=0;j<160;j++){X.push(samp(c));Y.push(c)}
+var mu=[],sd=[];for(var i=0;i<NF;i++){var m=0,q=0;X.forEach(function(x){m+=x[i]});m/=X.length;X.forEach(function(x){q+=(x[i]-m)*(x[i]-m)});mu.push(m);sd.push(Math.sqrt(q/X.length)||1)}
+function nz(v){return v.map(function(x,i){return(x-mu[i])/sd[i]})}
+var W=[],B=[];for(c=0;c<NC;c++){W.push(new Array(NF).fill(0));B.push(0)}
+function sm(z){var mx=Math.max.apply(null,z),e=z.map(function(x){return Math.exp(x-mx)}),s=e.reduce(function(a,b){return a+b});return e.map(function(x){return x/s})}
+function pred(v){var x=nz(v);return sm(W.map(function(w,k){return w.reduce(function(a,wi,i){return a+wi*x[i]},B[k])}))}
+var XN=X.map(nz);
+for(var ep=0;ep<250;ep++){var gW=W.map(function(){return new Array(NF).fill(0)}),gB=new Array(NC).fill(0);
+ XN.forEach(function(x,n){var p=sm(W.map(function(w,k){return w.reduce(function(a,wi,i){return a+wi*x[i]},B[k])}));for(var k=0;k<NC;k++){var e=p[k]-(Y[n]===k?1:0);gB[k]+=e;for(var i=0;i<NF;i++)gW[k][i]+=e*x[i]}});
+ for(var k=0;k<NC;k++){B[k]-=.5*gB[k]/XN.length;for(var i=0;i<NF;i++)W[k][i]-=.5*gW[k][i]/XN.length}}
+var ok=0,tot=0;for(c=0;c<NC;c++)for(j=0;j<80;j++){var p=pred(samp(c));if(p.indexOf(Math.max.apply(null,p))===c)ok++;tot++}
+$("acc").textContent=(ok/tot*100).toFixed(1)+"%";
+/* ---- UI ---- */
+var M=[{k:"V",l:"Voltage",u:"V",a:150,b:280,d:0,lo:205,hi:250},{k:"I",l:"Avg current",u:"A",a:0,b:6,d:2,hi:3.3},{k:"T",l:"Temperature",u:"°C",a:20,b:110,d:1,hi:60},{k:"R",l:"Speed",u:"RPM",a:1000,b:1600,d:0,lo:1380,hi:1520},
+{k:"vib",l:"Vibration",u:"mm/s",a:0,b:10,d:1,hi:2.8},{k:"P",l:"Power",u:"kW",a:0,b:3.5,d:2,hi:2.4},{k:"pf",l:"Power factor",u:"",a:.6,b:1,d:2,lo:.8},{k:"imb",l:"Current imbalance",u:"%",a:0,b:30,d:1,hi:5}];
+M.forEach(function(m){var d=document.createElement("div");d.className="card";d.innerHTML='<div class="u">'+m.l+'</div><span class="v" id="v'+m.k+'">-</span> <span class="u">'+m.u+'</span><canvas id="c'+m.k+'"></canvas>';$("metrics").appendChild(d)});
+C.forEach(function(c,i){var b=document.createElement("button");b.textContent=c.n;b.dataset.i=i;b.onclick=function(){mode=i;sync();lg(i?"warn":"ok","Simulating: "+c.n)};$("modes").appendChild(b);
+ var r=document.createElement("div");r.className="row";r.innerHTML='<span>'+c.n+'</span><div class="bar"><i id="p'+i+'"></i></div><b id="pt'+i+'">0%</b>';$("probs").appendChild(r)});
+var MS=[["V","Voltage (V)",150,280,230],["I","Current (A)",0,6,2.5],["T","Temperature (°C)",20,110,45],["R","Speed (RPM)",1000,1600,1450],["vib","Vibration (mm/s)",0,10,1.2],["imb","Imbalance (%)",0,30,2]];
+MS.forEach(function(s){var d=document.createElement("div");d.innerHTML='<div class="sl">'+s[1]+' <b id="mv'+s[0]+'">'+s[4]+'</b></div><input type="range" id="ms'+s[0]+'" min="'+s[2]+'" max="'+s[3]+'" step="any" value="'+s[4]+'" aria-label="'+s[1]+'">';$("manBox").appendChild(d)});
+var mode=0,sev=1,manual=false,cur={V:230,I:2.5,T:45,R:1450,vib:1.2,imb:2,pf:.86,P:1.5},hist={},hh=[],lastD=0,lastL="ok",P0=null;
+M.forEach(function(m){hist[m.k]=[]});
+function sync(){[].forEach.call($("modes").children,function(b){b.className=+b.dataset.i===mode?"on":""})}
+$("sev").oninput=function(){sev=this.value/100;$("sevT").textContent=this.value+"%"};
+$("bs").onclick=function(){manual=false;$("bs").className="on";$("bm").className="";$("simBox").hidden=false;$("manBox").hidden=true};
+$("bm").onclick=function(){manual=true;$("bm").className="on";$("bs").className="";$("simBox").hidden=true;$("manBox").hidden=false};
+function lg(l,t){var li=document.createElement("li"),c=col(l==="bad"?"--bad":l==="warn"?"--warn":"--ok");li.innerHTML='<b style="color:'+c+'">'+new Date().toLocaleTimeString()+'</b> '+t;$("log").insertBefore(li,$("log").firstChild);while($("log").children.length>40)$("log").removeChild($("log").lastChild)}
+function spark(id,a,mn,mx,color){var c=$(id),r=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*r;c.height=h*r;var x=c.getContext("2d");x.scale(r,r);if(a.length<2)return;x.strokeStyle=color;x.lineWidth=2;x.beginPath();a.forEach(function(v,i){var px=i/59*w,py=h-cl((v-mn)/(mx-mn),0,1)*(h-4)-2;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
+function spec(p){var c=$("spec"),r=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*r;c.height=h*r;var x=c.getContext("2d");x.scale(r,r);var n=24,bw=w/n,g=function(i,m,s){return Math.exp(-Math.pow((i-m)/s,2))};
+ for(var i=0;i<n;i++){var a=.06+Math.random()*.05+cur.vib/10*(.7*g(i,3,.6)+.3*g(i,6,.6))+p[3]*(.8*g(i,13,.7)+.6*g(i,17,.7)+.5*g(i,20,.7))+p[6]*.5*g(i,6,.6);a=cl(a,0,1);
+  x.fillStyle=a>.5?col("--bad"):col("--acc");x.fillRect(i*bw+2,h-a*(h-4),bw-4,a*(h-4))}}
+function health(s){return cl(100-cl((Math.abs(s.V-230)/230-.04)/.2,0,1)*20-cl((s.I/2.5-1.1)/.8,0,1)*25-cl((s.T-55)/45,0,1)*25-cl((Math.abs(s.R-1450)/1450-.03)/.15,0,1)*10-cl((s.vib-2.8)/4.3,0,1)*15-cl((s.imb-5)/15,0,1)*10,0,100)}
+var hl=100;
+function tick(){
+ if(manual){MS.forEach(function(s){var v=+$("ms"+s[0]).value;$("mv"+s[0]).textContent=v.toFixed(1);cur[s[0]]+=(v-cur[s[0]])*.5});cur.pf=cl(.86-(cur.I/2.5-1)*.04-cur.imb*.002,.6,.95)}
+ else K.forEach(function(k,i){var t=N[i]+(C[mode].f[i]-N[i])*sev;cur[k]+=(t-cur[k])*.2+gs()*SIG[i]*.6});
+ cur.P=3*cur.V*cur.I*cur.pf/1000;
+ var v=K.map(function(k){return cur[k]}),p=pred(v),bi=p.indexOf(Math.max.apply(null,p));
+ hl+=(health(cur)-hl)*.3;hh.push(hl);if(hh.length>40)hh.shift();
+ var lv=hl>=80?"ok":hl>=50?"warn":"bad",lc=col("--"+lv),z=0;for(var i=0;i<NF;i++)z+=Math.pow((v[i]-N[i])/(SIG[i]*3),2);var an=cl(Math.sqrt(z/NF)*20,0,100);
+ M.forEach(function(m){var x=cur[m.k],bad=(m.hi!==undefined&&x>m.hi)||(m.lo!==undefined&&x<m.lo);hist[m.k].push(x);if(hist[m.k].length>60)hist[m.k].shift();
+  $("v"+m.k).textContent=x.toFixed(m.d);$("v"+m.k).style.color=bad?col("--bad"):"";spark("c"+m.k,hist[m.k],m.a,m.b,bad?col("--bad"):col("--acc"))});
+ $("score").textContent=Math.round(hl)+"%";$("arc").style.strokeDashoffset=326.7*(1-hl/100);$("arc").style.stroke=lc;
+ $("status").textContent=lv==="ok"?"Healthy":lv==="warn"?"Warning":"Critical";$("status").style.background=lc;
+ var sl=hh.length>10?(hh[hh.length-1]-hh[0])/(hh.length-1):0;$("rul").textContent=sl<-.15&&hl>40?"Estimated time to critical: ~"+Math.round((hl-40)/-sl)+" s at current trend":hl<=40?"Immediate attention needed":"Stable trend";
+ $("diag").textContent=C[bi].d;$("diag").style.color=bi?col("--bad"):col("--ok");$("conf").textContent=Math.round(p[bi]*100)+"%";
+ $("an").style.width=an+"%";$("an").style.background=an>50?col("--bad"):an>25?col("--warn"):col("--ok");$("anT").textContent=an.toFixed(0)+"/100";
+ $("rec").innerHTML=C[bi].r.map(function(t){return"<li>"+t+"</li>"}).join("");
+ C.forEach(function(c,i){$("p"+i).style.width=p[i]*100+"%";$("p"+i).style.background=i?col("--warn"):col("--ok");$("pt"+i).textContent=Math.round(p[i]*100)+"%"});
+ var ia=cur.I*(1+cur.imb/100),ib=cur.I*(1-cur.imb/200),ic=ib;
+ $("ph").innerHTML=[["Phase R",ia],["Phase Y",ib],["Phase B",ic]].map(function(a){return'<div class="row"><span>'+a[0]+'</span><div class="bar"><i style="width:'+cl(a[1]/6*100,0,100)+'%;background:'+col("--acc")+'"></i></div><b style="width:56px">'+a[1].toFixed(2)+' A</b></div>'}).join("");
+ $("phT").textContent="Imbalance "+cur.imb.toFixed(1)+"% "+(cur.imb>5?"(above the 5% limit)":"(within limit)");
+ spec(p);
+ if(bi!==lastD){lg(bi?"bad":"ok",bi?"Fault detected: "+C[bi].d:"Back to normal operation");lastD=bi}
+ if(lv!==lastL){lg(lv,"Health status: "+$("status").textContent+" ("+Math.round(hl)+"%)");lastL=lv}
+ $("clock").textContent="Live · "+new Date().toLocaleTimeString();
+}
+sync();lg("ok","Monitoring started. AI model trained, accuracy "+$("acc").textContent);setInterval(tick,1000);tick();
+</script></body></html>
